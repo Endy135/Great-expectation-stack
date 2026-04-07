@@ -5,17 +5,27 @@ Stack complète de **Data Quality** avec interface web professionnelle.
 ## Architecture
 
 ```
-ge-stack/
+Great_expectation_stack/
+
 ├── docker-compose.yml        # Orchestration Docker
 ├── nginx.conf                # Reverse proxy vers l'API
-├── data/
-│   └── sample.csv            # Dataset exemple (15 employés)
-├── ge_runner/
-│   ├── Dockerfile            # Python 3.10 + Java + PySpark + GE
-│   ├── requirements.txt      # Dépendances Python
-│   └── app.py                # API Flask (REST)
-└── frontend/
-    └── index.html            # Interface web (HTML/CSS/JS vanilla)
+├── frontend                  # Interface web (HTML/CSS/JS vanilla)
+│   ├── app.js
+│   ├── index.html
+│   └── style.css
+├── data
+│   |── sample.csv             # Dataset exemple (15 employés)          
+├── ge_runner        
+│   ├── app.py                 # API Flask (REST)
+│   ├── Dockerfile             # Python 3.10 + Java + PySpark + GE
+│   ├── ge_config
+│   │   └── nginx.conf
+│   ├── requirements.txt       # Dépendances Python
+│   └── suites
+├── README.md
+├── spark
+│   └── Dockerfile
+
 ```
 
 ## Services Docker
