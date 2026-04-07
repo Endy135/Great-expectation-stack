@@ -1,0 +1,16 @@
+id,name,age,email,salary,department,hire_date
+1,Alice Martin,32,alice@company.com,75000,Engineering,2021-03-15
+2,Bob Dupont,28,bob@company.com,62000,Marketing,2022-07-01
+3,Carol Smith,45,carol@company.com,95000,Engineering,2019-11-20
+4,David Brown,35,,72000,HR,2020-05-10
+5,Eva Jones,29,eva@company.com,-500,Finance,2023-01-08
+6,Frank Miller,52,frank@company.com,110000,Engineering,2017-04-22
+7,Grace Lee,38,grace@company.com,88000,Finance,2020-09-14
+8,Henry Wilson,41,henry@company.com,79000,Marketing,2018-12-03
+9,Isabelle Moreau,26,isabelle@company.com,58000,HR,2023-06-19
+10,Jack Taylor,33,jack@company.com,83000,Engineering,2021-08-30
+11,Karen Davis,60,karen@company.com,120000,Engineering,2015-02-11
+12,Luc Bernard,47,luc@company.com,91000,Finance,2018-07-25
+13,,30,noemail,67000,Marketing,2022-03-05
+14,Nina Clark,22,nina@company.com,45000,HR,2024-01-15
+15,Oscar White,39,oscar@company.com,85000,Engineering,2020-10-08
