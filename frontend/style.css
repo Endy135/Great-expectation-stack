@@ -173,3 +173,8 @@
     .logo-title, .logo-sub, .nav-item span, .nav-label, .api-status span { display: none; }
     .nav-item { justify-content: center; }
   }
+
+  /* SOURCE TABS */
+  .source-tab { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
+  .source-tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .source-tab-active { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }

@@ -173,7 +173,7 @@ curl http://localhost:8080/
 ``` bash
 # Copier les fichiers mis à jour dans votre dossier ge-stack
 # puis redémarrer uniquement le container API (pas besoin de rebuild)
-docker compose restart ge-api
+docker compose restart ge-api                ####################################### Pour Résoudre le  crash java ################################################
 
 # Pour le frontend, copier index.html et recharger le browser
 docker cp frontend/index.html ge-frontend:/usr/share/nginx/html/index.html

@@ -1,5 +1,20 @@
+# data
 data/*
 !data/
 !data/sample.csv
+
 # Spark / build
 spark-*.tgz
+
+# env
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# logs
+*.log
+
+# OS
+.DS_Store

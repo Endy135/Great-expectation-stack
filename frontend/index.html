@@ -6,39 +6,37 @@
 <title>GE Stack — Data Quality Platform</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
- <!-- style: style.css -->
 </head>
 <body>
 
 <div class="shell">
 
-  <!-- SIDEBAR -->
+  <!-- ── SIDEBAR ─────────────────────────────────────────────────────────── -->
   <aside class="sidebar">
     <div class="logo">
       <div class="logo-title">GE Stack</div>
       <div class="logo-sub">Data Quality Platform</div>
     </div>
     <nav class="nav">
-      <div class="nav-label">Navigation</div>
-      <div class="nav-item active" onclick="goto('data')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 7h14"/><path d="M5 3v10"/></svg>
+      <span class="nav-label">Navigation</span>
+      <div class="nav-item active" onclick="goto('data', event)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12"/><path d="M6 6v7"/></svg>
         <span>Données</span>
       </div>
-      <div class="nav-item" onclick="goto('suites')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h8M2 12h5"/></svg>
+      <div class="nav-item" onclick="goto('suites', event)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h7M3 12h5"/></svg>
         <span>Suites</span>
       </div>
-      <div class="nav-item" onclick="goto('validate')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M5 8l2 2 4-4"/></svg>
+      <div class="nav-item" onclick="goto('validate', event)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 4L6 11l-3-3"/></svg>
         <span>Validation</span>
       </div>
-      <div class="nav-item" onclick="goto('results')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12V6l4-4h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2z"/><path d="M6 2v4H2"/></svg>
+      <div class="nav-item" onclick="goto('results', event)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
         <span>Résultats</span>
       </div>
-      <div class="nav-label">Dev</div>
-      <div class="nav-item" onclick="goto('docs')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2C4.7 2 2 4.7 2 8s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6zm0 3v3l2 1"/></svg>
+      <div class="nav-item" onclick="goto('docs', event)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h6l3 3v9H4z"/><path d="M10 2v3h3"/><path d="M6 8h5M6 11h3"/></svg>
         <span>API Docs</span>
       </div>
     </nav>
@@ -48,37 +46,92 @@
     </div>
   </aside>
 
-  <!-- MAIN -->
+  <!-- ── MAIN ───────────────────────────────────────────────────────────── -->
   <div class="main">
     <div class="topbar">
-      <div class="topbar-title" id="page-title">Aperçu des données</div>
-      <div class="topbar-actions" id="topbar-actions"></div>
+      <div class="topbar-title" id="topbar-title">Aperçu des données</div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost btn-sm" onclick="refreshSource()">↻ Rafraîchir</button>
+      </div>
     </div>
+
     <div class="content">
 
-      <!-- TAB: DATA -->
+      <!-- ── ONGLET DONNÉES ───────────────────────────────────────────── -->
       <div class="tab-panel active" id="tab-data">
 
-        <!-- File selector bar -->
-        <div class="card mb-16" style="padding:14px 18px;">
-          <div class="flex-center">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--muted)" stroke-width="1.5" style="flex-shrink:0"><path d="M2 4a2 2 0 012-2h3l2 2h3a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V4z"/></svg>
-            <span style="font-size:11px;color:var(--muted);margin-left:6px;text-transform:uppercase;letter-spacing:.07em;font-weight:600;">Fichier source</span>
-            <div class="ml-auto flex-center" style="gap:8px;">
-              <select class="input" id="file-select" onchange="selectFile()" style="width:260px;font-family:var(--mono);font-size:12px;">
-                <option value="">Chargement…</option>
-              </select>
-              <button class="btn btn-ghost btn-sm" onclick="loadFiles()" title="Rafraîchir la liste">↻</button>
+        <!-- Source selector bar -->
+        <div class="card mb-16" style="padding:14px 18px;" id="source-bar">
+          <div class="flex-center" style="gap:6px;">
+            <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;white-space:nowrap;">Source</span>
+            <div class="flex-center" style="gap:4px;margin-left:8px;">
+              <button class="btn btn-sm source-tab" id="src-btn-local"    onclick="switchSource('local')">📁 Local</button>
+              <button class="btn btn-sm source-tab" id="src-btn-minio"    onclick="switchSource('minio')">🪣 MinIO</button>
+              <button class="btn btn-sm source-tab" id="src-btn-postgres" onclick="switchSource('postgres')">🐘 PostgreSQL</button>
+            </div>
+            <button class="btn btn-ghost btn-sm ml-auto" onclick="refreshSource()" title="Rafraîchir">↻</button>
+          </div>
+
+          <div style="margin-top:10px;">
+            <!-- LOCAL -->
+            <div id="source-panel-local" class="source-panel">
+              <div class="flex-center" style="gap:8px;">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--muted)" stroke-width="1.5" style="flex-shrink:0"><path d="M2 4a2 2 0 012-2h3l2 2h3a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V4z"/></svg>
+                <select class="input" id="file-select" onchange="selectFile()" style="width:300px;font-family:var(--mono);font-size:12px;">
+                  <option value="">Chargement…</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- MINIO -->
+            <div id="source-panel-minio" class="source-panel" style="display:none;">
+              <div class="flex-center" style="gap:8px;flex-wrap:wrap;">
+                <div class="form-col" style="min-width:160px;max-width:200px;">
+                  <div class="form-label">Bucket</div>
+                  <select class="input" id="minio-bucket-select" onchange="loadMinioFiles()" style="font-family:var(--mono);font-size:12px;">
+                    <option value="">Chargement…</option>
+                  </select>
+                </div>
+                <div class="form-col" style="flex:1;min-width:200px;">
+                  <div class="form-label">Fichier</div>
+                  <select class="input" id="minio-file-select" onchange="selectMinioFile()" style="font-family:var(--mono);font-size:12px;">
+                    <option value="">— sélectionner un bucket —</option>
+                  </select>
+                </div>
+              </div>
+              <div id="minio-error" style="margin-top:6px;font-size:11px;color:var(--danger);display:none;"></div>
+            </div>
+
+            <!-- POSTGRES -->
+            <div id="source-panel-postgres" class="source-panel" style="display:none;">
+              <div class="flex-center" style="gap:8px;flex-wrap:wrap;">
+                <div class="form-col" style="flex:1;min-width:200px;">
+                  <div class="form-label">Table</div>
+                  <select class="input" id="pg-table-select" onchange="selectPgTable()" style="font-family:var(--mono);font-size:12px;">
+                    <option value="">Chargement…</option>
+                  </select>
+                </div>
+                <div class="form-col" style="flex:2;min-width:280px;">
+                  <div class="form-label">Ou requête SQL personnalisée</div>
+                  <div class="flex-center" style="gap:6px;">
+                    <input class="input" id="pg-query-input" placeholder="SELECT * FROM ma_table WHERE …" style="font-family:var(--mono);font-size:12px;">
+                    <button class="btn btn-primary btn-sm" onclick="selectPgQuery()" style="white-space:nowrap;">Exécuter</button>
+                  </div>
+                </div>
+              </div>
+              <div id="pg-error" style="margin-top:6px;font-size:11px;color:var(--danger);display:none;"></div>
             </div>
           </div>
-          <div id="file-meta" style="margin-top:8px;font-size:11px;font-family:var(--mono);color:var(--muted);display:none;"></div>
+
+          <div id="source-meta" style="margin-top:8px;font-size:11px;font-family:var(--mono);color:var(--muted);display:none;"></div>
         </div>
 
-        <div class="grid-4 mb-16" id="data-stats-grid">
+        <!-- Stats rapides -->
+        <div class="grid-4 mb-16">
           <div class="stat-card"><div class="stat-val stat-accent" id="s-rows">—</div><div class="stat-label">Lignes</div></div>
           <div class="stat-card"><div class="stat-val stat-accent" id="s-cols">—</div><div class="stat-label">Colonnes</div></div>
-          <div class="stat-card"><div class="stat-val stat-warn" id="s-nulls">—</div><div class="stat-label">Valeurs nulles</div></div>
-          <div class="stat-card"><div class="stat-val stat-success" id="s-file">CSV</div><div class="stat-label">Format</div></div>
+          <div class="stat-card"><div class="stat-val stat-warn"   id="s-nulls">—</div><div class="stat-label">Valeurs nulles</div></div>
+          <div class="stat-card"><div class="stat-val stat-success" id="s-file">—</div><div class="stat-label">Format</div></div>
         </div>
 
         <div class="card">
@@ -88,172 +141,123 @@
 
         <div class="card">
           <div class="card-title">Profil des colonnes</div>
-          <div id="col-profile"><div class="spinner"></div></div>
+          <div id="col-profile"><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Chargement…</div></div></div>
         </div>
       </div>
 
-      <!-- TAB: SUITES -->
+      <!-- ── ONGLET SUITES ────────────────────────────────────────────── -->
       <div class="tab-panel" id="tab-suites">
         <div class="grid-2">
-          <!-- LEFT: suite list -->
+          <!-- Liste des suites -->
           <div>
             <div class="card">
               <div class="flex-center mb-16">
                 <div class="card-title" style="margin:0">Suites d'expectations</div>
-                <div class="ml-auto">
-                  <button class="btn btn-primary btn-sm" onclick="showCreateSuite()">+ Nouvelle suite</button>
+                <button class="btn btn-primary btn-sm ml-auto" onclick="showCreateSuite()">+ Nouvelle suite</button>
+              </div>
+              <div id="suite-create-form" style="display:none;margin-bottom:14px;">
+                <div class="flex-center" style="gap:8px;">
+                  <input class="input" id="new-suite-name" placeholder="Nom de la suite…">
+                  <button class="btn btn-primary btn-sm" onclick="createSuite()">Créer</button>
+                  <button class="btn btn-ghost btn-sm" onclick="hideCreateSuite()">✕</button>
                 </div>
               </div>
-              <div id="suite-list"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Aucune suite</div></div></div>
+              <div id="suite-list"><div class="empty"><div class="empty-text">Aucune suite</div></div></div>
             </div>
           </div>
-          <!-- RIGHT: suite editor -->
+
+          <!-- Détail suite sélectionnée -->
           <div>
-            <div class="card" id="suite-editor" style="display:none">
+            <div class="card">
               <div class="flex-center mb-16">
-                <div style="font-size:15px;font-weight:700;" id="editor-title">—</div>
-                <div class="ml-auto">
-                  <button class="btn btn-danger btn-sm" onclick="deleteSuite()">Supprimer</button>
-                </div>
+                <div class="card-title" style="margin:0" id="suite-detail-title">Sélectionner une suite</div>
+                <button class="btn btn-danger btn-sm ml-auto" onclick="deleteSuite()" id="btn-delete-suite" style="display:none">Supprimer</button>
               </div>
-              <div class="card-title">Expectations</div>
-              <div id="exp-list"></div>
-              <div class="sep"></div>
-              <div class="card-title">Ajouter une expectation</div>
-              <div class="form-row mb-10">
-                <div class="form-col">
-                  <div class="form-label">Type</div>
-                  <select class="input" id="exp-type" onchange="renderExpParams()"></select>
-                </div>
-              </div>
-              <div id="exp-params"></div>
-              <button class="btn btn-primary" onclick="addExpectation()" style="width:100%;margin-top:8px;">Ajouter</button>
-            </div>
-            <div id="suite-placeholder" class="card" style="display:flex;align-items:center;justify-content:center;min-height:200px;color:var(--muted);font-size:13px;">
-              ← Sélectionnez une suite
-            </div>
-          </div>
-        </div>
 
-        <!-- Create Suite Modal -->
-        <div id="create-suite-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;display:none;align-items:center;justify-content:center;">
-          <div style="background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:28px;min-width:340px;">
-            <div style="font-size:16px;font-weight:700;margin-bottom:18px;">Nouvelle suite</div>
-            <div class="form-label">Nom de la suite</div>
-            <input class="input mb-10" id="new-suite-name" placeholder="ex: employee_quality" style="margin-bottom:14px;">
-            <div style="display:flex;gap:8px;justify-content:flex-end;">
-              <button class="btn btn-ghost" onclick="hideModal()">Annuler</button>
-              <button class="btn btn-primary" onclick="createSuite()">Créer</button>
+              <!-- Ajouter expectation -->
+              <div id="exp-add-form" style="display:none;">
+                <div class="form-row">
+                  <div class="form-col">
+                    <div class="form-label">Type d'expectation</div>
+                    <select class="input" id="exp-type" onchange="renderExpParams()"></select>
+                  </div>
+                </div>
+                <div id="exp-params-wrap" class="form-row"></div>
+                <button class="btn btn-primary btn-sm" onclick="addExpectation()">Ajouter</button>
+              </div>
+
+              <div class="sep" id="exp-sep" style="display:none;"></div>
+              <div id="exp-list"><div class="empty"><div class="empty-text">Aucune expectation</div></div></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- TAB: VALIDATE -->
+      <!-- ── ONGLET VALIDATION ────────────────────────────────────────── -->
       <div class="tab-panel" id="tab-validate">
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-title">Lancer une validation</div>
-            <div class="form-label">Sélectionner une suite</div>
-            <select class="input mb-10" id="val-suite-select" style="margin-bottom:14px;"></select>
-            <button class="btn btn-success" onclick="runValidation()" style="width:100%">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="4,2 14,8 4,14"/></svg>
-              Valider avec PySpark
-            </button>
-            <div id="val-running" style="display:none;margin-top:16px;" class="flex-center text-muted text-sm">
-              <div class="spinner"></div> Exécution Spark en cours…
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-title">Fichier source</div>
-            <div class="code-block">
-<span class="cm"># PySpark — Lecture du dataset</span>
-df = spark.read.csv(
-  <span class="str">"/data/sample.csv"</span>,
-  header=<span class="kw">True</span>,
-  inferSchema=<span class="kw">True</span>
-)
-
-<span class="cm"># Great Expectations — Validation</span>
-validator = ctx.get_validator(
-  batch_request=batch_request,
-  expectation_suite=suite,
-)
-result = validator.validate()
-            </div>
-          </div>
-        </div>
-        <div id="val-result-container"></div>
-      </div>
-
-      <!-- TAB: RESULTS -->
-      <div class="tab-panel" id="tab-results">
-        <div class="flex-center mb-16">
-          <div style="font-size:13px;color:var(--muted);" id="results-count">—</div>
-          <div class="ml-auto">
-            <button class="btn btn-danger btn-sm" onclick="clearResults()">Effacer l'historique</button>
-          </div>
-        </div>
-        <div id="results-list"><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Aucun résultat</div></div></div>
-      </div>
-
-      <!-- TAB: DOCS -->
-      <div class="tab-panel" id="tab-docs">
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-title">Endpoints disponibles</div>
-            <table class="tbl">
-              <tr><th>Méthode</th><th>Route</th><th>Description</th></tr>
-              <tr><td><span class="badge badge-info">GET</span></td><td>/api/data/preview</td><td style="font-family:var(--sans)">Aperçu CSV</td></tr>
-              <tr><td><span class="badge badge-info">GET</span></td><td>/api/data/stats</td><td style="font-family:var(--sans)">Profil colonnes</td></tr>
-              <tr><td><span class="badge badge-info">GET</span></td><td>/api/suites</td><td style="font-family:var(--sans)">Lister suites</td></tr>
-              <tr><td><span class="badge badge-success">POST</span></td><td>/api/suites</td><td style="font-family:var(--sans)">Créer une suite</td></tr>
-              <tr><td><span class="badge badge-danger">DEL</span></td><td>/api/suites/:n</td><td style="font-family:var(--sans)">Supprimer suite</td></tr>
-              <tr><td><span class="badge badge-success">POST</span></td><td>/api/suites/:n/expectations</td><td style="font-family:var(--sans)">Ajouter expectation</td></tr>
-              <tr><td><span class="badge badge-success">POST</span></td><td>/api/validate/:n</td><td style="font-family:var(--sans)">Lancer validation</td></tr>
-              <tr><td><span class="badge badge-info">GET</span></td><td>/api/results</td><td style="font-family:var(--sans)">Historique</td></tr>
-            </table>
-          </div>
-          <div class="card">
-            <div class="card-title">Stack technique</div>
-            <table class="tbl">
-              <tr><th>Composant</th><th>Version</th><th>Rôle</th></tr>
-              <tr><td>Great Expectations</td><td>0.18.x</td><td style="font-family:var(--sans)">Moteur de validation</td></tr>
-              <tr><td>PySpark</td><td>3.5.1</td><td style="font-family:var(--sans)">Traitement distribué</td></tr>
-              <tr><td>Flask</td><td>3.0</td><td style="font-family:var(--sans)">API REST</td></tr>
-              <tr><td>Nginx</td><td>Alpine</td><td style="font-family:var(--sans)">Reverse proxy</td></tr>
-              <tr><td>Docker Compose</td><td>3.9</td><td style="font-family:var(--sans)">Orchestration</td></tr>
-              <tr><td>Python</td><td>3.10</td><td style="font-family:var(--sans)">Runtime</td></tr>
-            </table>
-          </div>
-        </div>
         <div class="card">
-          <div class="card-title">Démarrage rapide</div>
-          <div class="code-block">
-<span class="cm"># 1. Cloner / placer les fichiers</span>
-cd ge-stack/
-
-<span class="cm"># 2. Lancer la stack complète</span>
-docker compose up --build -d
-
-<span class="cm"># 3. Attendre que l'API soit prête (~60s pour Spark)</span>
-docker compose logs -f ge-api
-
-<span class="cm"># 4. Ouvrir l'interface</span>
-open http://localhost:8080
-
-<span class="cm"># 5. API directe</span>
-curl http://localhost:5000/api/data/preview | python -m json.tool
+          <div class="card-title">Lancer une validation</div>
+          <div class="form-row" style="align-items:flex-end;gap:12px;">
+            <div class="form-col">
+              <div class="form-label">Suite à valider</div>
+              <select class="input" id="val-suite-select" style="margin-bottom:14px;"></select>
+            </div>
+            <button class="btn btn-success" onclick="runValidation()" style="margin-bottom:14px;">▶ Valider avec PySpark</button>
           </div>
+          <div id="val-result"></div>
         </div>
       </div>
 
-    </div>
-  </div>
-</div>
+      <!-- ── ONGLET RÉSULTATS ─────────────────────────────────────────── -->
+      <div class="tab-panel" id="tab-results">
+        <div class="card">
+          <div class="flex-center mb-16">
+            <div class="card-title" style="margin:0">Historique des validations</div>
+            <button class="btn btn-danger btn-sm ml-auto" onclick="clearResults()">Effacer tout</button>
+          </div>
+          <div id="results-list"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Aucun résultat</div></div></div>
+        </div>
+      </div>
+
+      <!-- ── ONGLET DOCS ──────────────────────────────────────────────── -->
+      <div class="tab-panel" id="tab-docs">
+        <div class="card">
+          <div class="card-title">API REST — Endpoints</div>
+          <table class="tbl">
+            <thead><tr><th>Méthode</th><th>Endpoint</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge badge-info">GET</span></td><td>/api/health</td><td>Health check</td></tr>
+              <tr><td><span class="badge badge-info">GET</span></td><td>/api/source</td><td>Source active</td></tr>
+              <tr><td><span class="badge badge-warn">POST</span></td><td>/api/source/switch</td><td>Changer de source</td></tr>
+              <tr><td><span class="badge badge-info">GET</span></td><td>/api/data/files</td><td>Fichiers locaux</td></tr>
+              <tr><td><span class="badge badge-warn">POST</span></td><td>/api/data/select</td><td>Sélectionner fichier local</td></tr>
+              <tr><td><span class="badge badge-info">GET</span></td><td>/api/minio/buckets</td><td>Buckets MinIO</td></tr>
+              <tr><td><span class="badge badge-info">GET</span></td><td>/api/minio/files?bucket=…</td><td>Fichiers d'un bucket</td></tr>
+              <tr><td><span class="badge badge-warn">POST</span></td><td>/api/minio/select</td><td>Sélectionner fichier MinIO</td></tr>
+              <tr><td><span class="badge badge-info">GET</span></td><td>/api/postgres/tables</td><td>Tables PostgreSQL</td></tr>
+              <tr><td><span class="badge badge-warn">POST</span></td><td>/api/postgres/select</td><td>Sélectionner table/requête</td></tr>
+              <tr><td><span class="badge badge-info">GET</span></td><td>/api/data/preview</td><td>Aperçu (source active)</td></tr>
+              <tr><td><span class="badge badge-info">GET</span></td><td>/api/data/stats</td><td>Profil colonnes</td></tr>
+              <tr><td><span class="badge badge-info">GET</span></td><td>/api/data/columns</td><td>Liste colonnes</td></tr>
+              <tr><td><span class="badge badge-info">GET</span></td><td>/api/suites</td><td>Lister suites</td></tr>
+              <tr><td><span class="badge badge-warn">POST</span></td><td>/api/suites</td><td>Créer suite</td></tr>
+              <tr><td><span class="badge badge-danger">DELETE</span></td><td>/api/suites/:name</td><td>Supprimer suite</td></tr>
+              <tr><td><span class="badge badge-warn">POST</span></td><td>/api/suites/:name/expectations</td><td>Ajouter expectation</td></tr>
+              <tr><td><span class="badge badge-danger">DELETE</span></td><td>/api/suites/:name/expectations/:idx</td><td>Supprimer expectation</td></tr>
+              <tr><td><span class="badge badge-warn">POST</span></td><td>/api/validate/:suite</td><td>Lancer validation</td></tr>
+              <tr><td><span class="badge badge-info">GET</span></td><td>/api/results</td><td>Historique</td></tr>
+              <tr><td><span class="badge badge-danger">DELETE</span></td><td>/api/results</td><td>Effacer historique</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /shell -->
 
 <div id="toast"></div>
-  <!-- script: app.js -->
-<script src="app.js"> </script> 
+
+<script src="app.js"></script>
 </body>
 </html>
