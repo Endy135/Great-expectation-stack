@@ -1,0 +1,28 @@
+{
+  "employes_csv": {
+    "name": "employes_csv",
+    "alias": "infos employés",
+    "description": "Donne les infos sur chaque client d'une organisation",
+    "owner": "Equipe Data",
+    "tags": [
+      "test"
+    ],
+    "source_type": "local",
+    "source_ref": "employes.csv",
+    "created_at": "2026-04-08T16:25:52.575974",
+    "updated_at": "2026-04-08T16:57:52.548220"
+  },
+  "Vue_bulletin_all": {
+    "name": "Vue_bulletin_all",
+    "alias": "infos paiement assurés",
+    "description": "Donne les details d'information  de paiement des assurés par prestation",
+    "owner": "Equipe Data",
+    "tags": [
+      "dejta"
+    ],
+    "source_type": "local",
+    "source_ref": "vue_bulletin_all.csv",
+    "created_at": "2026-04-08T17:00:29.303735",
+    "updated_at": "2026-04-08T17:00:29.303750"
+  }
+}
