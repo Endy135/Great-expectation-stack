@@ -270,17 +270,49 @@
             <div class="form-row">
               <div class="form-col">
                 <div class="form-label">Type de source</div>
-                <select class="input mb-10" id="cf-source-type">
+                <select class="input mb-10" id="cf-source-type" onchange="onCatalogSourceTypeChange()">
                   <option value="">— non spécifié —</option>
                   <option value="local">📁 Local</option>
                   <option value="minio">🪣 MinIO</option>
                   <option value="postgres">🐘 PostgreSQL</option>
                 </select>
               </div>
-              <div class="form-col">
-                <div class="form-label">Référence (chemin / table / clé)</div>
+              <div class="form-col" id="cf-source-ref-wrap">
+                <div class="form-label">Référence</div>
                 <input class="input mb-10" id="cf-source-ref" placeholder="ex: ventes.csv ou public.orders">
               </div>
+            </div>
+
+            <!-- Sélecteur MinIO bucket+fichier (caché par défaut) -->
+            <div id="cf-minio-wrap" style="display:none;" class="form-row">
+              <div class="form-col" style="max-width:200px;">
+                <div class="form-label">Bucket</div>
+                <select class="input mb-10" id="cf-minio-bucket" onchange="onCatalogMinioBucketChange()">
+                  <option value="">Chargement…</option>
+                </select>
+              </div>
+              <div class="form-col">
+                <div class="form-label">Fichier</div>
+                <select class="input mb-10" id="cf-minio-file" onchange="onCatalogRefSelected('minio')">
+                  <option value="">— choisir un bucket —</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Sélecteur PostgreSQL table (caché par défaut) -->
+            <div id="cf-pg-wrap" style="display:none;">
+              <div class="form-label">Table PostgreSQL</div>
+              <select class="input mb-10" id="cf-pg-table" onchange="onCatalogRefSelected('postgres')">
+                <option value="">Chargement…</option>
+              </select>
+            </div>
+
+            <!-- Sélecteur Local fichier (caché par défaut) -->
+            <div id="cf-local-wrap" style="display:none;">
+              <div class="form-label">Fichier local</div>
+              <select class="input mb-10" id="cf-local-file" onchange="onCatalogRefSelected('local')">
+                <option value="">Chargement…</option>
+              </select>
             </div>
 
             <!-- Éditeur de champs -->

@@ -793,20 +793,190 @@ function filterCatalog() {
 
 // ── Modal ──────────────────────────────────────────────────────────────────────
 
+// ── Sélecteur de référence dynamique dans le modal catalog ───────────────────
+
+async function onCatalogSourceTypeChange() {
+  const type = document.getElementById('cf-source-type').value;
+  // Cacher tous les sélecteurs spécifiques
+  ['cf-minio-wrap','cf-pg-wrap','cf-local-wrap'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  // Remettre le champ texte visible par défaut
+  const refWrap = document.getElementById('cf-source-ref-wrap');
+  if (refWrap) refWrap.style.display = '';
+  document.getElementById('cf-source-ref').value = '';
+  _renderFieldsEditor([]);
+
+  if (type === 'local') {
+    refWrap.style.display = 'none';
+    const wrap = document.getElementById('cf-local-wrap');
+    if (wrap) wrap.style.display = '';
+    await _loadCatalogLocalFiles();
+  } else if (type === 'minio') {
+    refWrap.style.display = 'none';
+    const wrap = document.getElementById('cf-minio-wrap');
+    if (wrap) wrap.style.display = '';
+    await _loadCatalogMinioBuckets();
+  } else if (type === 'postgres') {
+    refWrap.style.display = 'none';
+    const wrap = document.getElementById('cf-pg-wrap');
+    if (wrap) wrap.style.display = '';
+    await _loadCatalogPgTables();
+  }
+}
+
+async function _loadCatalogLocalFiles() {
+  const sel = document.getElementById('cf-local-file');
+  if (!sel) return;
+  try {
+    const r = await fetch(`${API}/data/files`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data  = await r.json();
+    const files = data.files || [];
+    sel.innerHTML = '<option value="">— choisir un fichier —</option>' +
+      files.map(f => `<option value="${f.name}">${f.name} (${f.size_kb} KB)</option>`).join('');
+  } catch (e) {
+    sel.innerHTML = `<option value="">Erreur : ${e.message}</option>`;
+  }
+}
+
+async function _loadCatalogMinioBuckets() {
+  const sel = document.getElementById('cf-minio-bucket');
+  if (!sel) return;
+  try {
+    const r = await fetch(`${API}/minio/buckets`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    sel.innerHTML = '<option value="">— choisir un bucket —</option>' +
+      (data.buckets || []).map(b => `<option value="${b}">${b}</option>`).join('');
+    document.getElementById('cf-minio-file').innerHTML = '<option value="">— choisir un bucket —</option>';
+  } catch (e) {
+    sel.innerHTML = `<option value="">Erreur : ${e.message}</option>`;
+  }
+}
+
+async function onCatalogMinioBucketChange() {
+  const bucket = document.getElementById('cf-minio-bucket')?.value;
+  const sel    = document.getElementById('cf-minio-file');
+  if (!bucket || !sel) return;
+  try {
+    const r = await fetch(`${API}/minio/files?bucket=${encodeURIComponent(bucket)}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data  = await r.json();
+    const files = data.files || [];
+    sel.innerHTML = '<option value="">— choisir un fichier —</option>' +
+      files.map(f => `<option value="${f.name}">${f.name} (${f.size_kb} KB)</option>`).join('');
+  } catch (e) {
+    sel.innerHTML = `<option value="">Erreur : ${e.message}</option>`;
+  }
+}
+
+async function _loadCatalogPgTables() {
+  const sel = document.getElementById('cf-pg-table');
+  if (!sel) return;
+  try {
+    const r = await fetch(`${API}/postgres/tables`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    sel.innerHTML = '<option value="">— choisir une table —</option>' +
+      (data.tables || []).map(t => `<option value="${t}">${t}</option>`).join('');
+  } catch (e) {
+    sel.innerHTML = `<option value="">Erreur : ${e.message}</option>`;
+  }
+}
+
+// Appelé quand l'user sélectionne une ref → charger les colonnes depuis l'API
+async function onCatalogRefSelected(type) {
+  let ref = '';
+  if (type === 'local') {
+    ref = document.getElementById('cf-local-file')?.value;
+  } else if (type === 'minio') {
+    const bucket = document.getElementById('cf-minio-bucket')?.value;
+    const file   = document.getElementById('cf-minio-file')?.value;
+    if (bucket && file) ref = `${bucket}/${file}`;
+  } else if (type === 'postgres') {
+    ref = document.getElementById('cf-pg-table')?.value;
+  }
+  if (!ref) return;
+
+  // Mettre à jour source_ref caché (pour la sauvegarde)
+  document.getElementById('cf-source-ref').value = ref;
+
+  // Charger les colonnes via l'API correspondante pour pré-remplir le tableau
+  await _fetchAndFillFields(type, ref);
+}
+
+async function _fetchAndFillFields(type, ref) {
+  if (!ref) return;
+  _renderFieldsEditor([{ name: '…', type: 'chargement', description: '', nullable: true }]);
+  try {
+    let columns = [];
+    if (type === 'local') {
+      // Sélectionner temporairement le fichier pour récupérer ses colonnes
+      await fetch(`${API}/data/select`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: ref }),
+      });
+      const r = await fetch(`${API}/data/columns`);
+      if (r.ok) { const d = await r.json(); columns = d.columns || []; }
+    } else if (type === 'minio') {
+      const [bucket, ...keyParts] = ref.split('/');
+      const key = keyParts.join('/');
+      await fetch(`${API}/minio/select`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bucket, key }),
+      });
+      const r = await fetch(`${API}/data/columns`);
+      if (r.ok) { const d = await r.json(); columns = d.columns || []; }
+    } else if (type === 'postgres') {
+      await fetch(`${API}/postgres/select`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: ref }),
+      });
+      const r = await fetch(`${API}/data/columns`);
+      if (r.ok) { const d = await r.json(); columns = d.columns || []; }
+    }
+
+    // columns = [{name, type}] — pré-remplir le tableau avec type déjà renseigné
+    _renderFieldsEditor(columns.map(c => ({
+      name:        typeof c === 'object' ? c.name : c,
+      type:        typeof c === 'object' ? (c.type || '') : '',
+      description: '',
+      nullable:    true,
+    })));
+  } catch (e) {
+    _renderFieldsEditor([]);
+    console.warn('Impossible de charger les colonnes :', e.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function openCatalogModal(key = null) {
   const overlay = document.getElementById('catalog-modal-overlay');
   const errEl   = document.getElementById('catalog-modal-error');
   if (errEl) errEl.style.display = 'none';
 
+  // Reset tous les champs
   ['cf-name','cf-alias','cf-description','cf-owner','cf-tags','cf-source-ref'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
   document.getElementById('cf-source-type').value = '';
   document.getElementById('catalog-edit-key').value = '';
-  _renderFieldsEditor([]);   // reset tableau champs
+
+  // Cacher les sélecteurs spécifiques, montrer le champ texte générique
+  ['cf-minio-wrap','cf-pg-wrap','cf-local-wrap'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const refWrap = document.getElementById('cf-source-ref-wrap');
+  if (refWrap) refWrap.style.display = '';
+  _renderFieldsEditor([]);
 
   if (key && catalogData[key]) {
+    // ── Mode édition ──
     const e = catalogData[key];
     document.getElementById('catalog-modal-title').textContent = 'Modifier la source';
     document.getElementById('catalog-edit-key').value   = key;
@@ -818,19 +988,34 @@ function openCatalogModal(key = null) {
     document.getElementById('cf-tags').value            = (e.tags || []).join(', ');
     document.getElementById('cf-source-type').value     = e.source_type || '';
     document.getElementById('cf-source-ref').value      = e.source_ref || '';
+    // Afficher les champs sauvegardés (types déjà connus, modifiables)
     _renderFieldsEditor(e.fields || []);
+    // Si type connu → afficher le bon sélecteur en mode lecture seule info
+    if (e.source_type) _showCatalogRefInfo(e.source_type, e.source_ref);
   } else {
+    // ── Mode création ──
     document.getElementById('catalog-modal-title').textContent = 'Nouvelle source';
     document.getElementById('cf-name').disabled = false;
-    // Pré-remplir avec les colonnes actives si disponibles
-    if (availableColumns.length) {
+    // Si une source est déjà active dans l'app → pré-remplir
+    if (currentSource && currentSource !== 'local' || availableColumns.length) {
+      document.getElementById('cf-source-type').value = currentSource || '';
       _renderFieldsEditor(availableColumns.map(c => ({
-        name: c.name, type: c.type || '', description: '', nullable: true
+        name: c.name || c, type: c.type || '', description: '', nullable: true,
       })));
     }
   }
 
   overlay.style.display = 'flex';
+}
+
+// Afficher l'info de référence en mode édition (lecture seule, pas de rechargement)
+function _showCatalogRefInfo(type, ref) {
+  if (!ref) return;
+  const refWrap = document.getElementById('cf-source-ref-wrap');
+  if (refWrap) refWrap.style.display = '';
+  // Afficher le champ texte avec la ref actuelle en readonly visuel
+  const input = document.getElementById('cf-source-ref');
+  if (input) { input.value = ref; input.style.color = 'var(--muted)'; }
 }
 
 // ── Éditeur de champs (tableau inline dans le modal) ─────────────────────────
@@ -909,6 +1094,19 @@ async function saveCatalogEntry() {
   const errEl   = document.getElementById('catalog-modal-error');
   const editKey = document.getElementById('catalog-edit-key').value;
   const isEdit  = !!editKey;
+  const srcType = document.getElementById('cf-source-type').value;
+
+  // Résoudre source_ref selon le type actif
+  let sourceRef = document.getElementById('cf-source-ref').value.trim();
+  if (srcType === 'local' && document.getElementById('cf-local-file')?.value) {
+    sourceRef = document.getElementById('cf-local-file').value;
+  } else if (srcType === 'minio') {
+    const bucket = document.getElementById('cf-minio-bucket')?.value;
+    const file   = document.getElementById('cf-minio-file')?.value;
+    if (bucket && file) sourceRef = `${bucket}/${file}`;
+  } else if (srcType === 'postgres' && document.getElementById('cf-pg-table')?.value) {
+    sourceRef = document.getElementById('cf-pg-table').value;
+  }
 
   const payload = {
     name:        document.getElementById('cf-name').value.trim(),
@@ -916,8 +1114,8 @@ async function saveCatalogEntry() {
     description: document.getElementById('cf-description').value.trim(),
     owner:       document.getElementById('cf-owner').value.trim(),
     tags:        document.getElementById('cf-tags').value.split(',').map(t => t.trim()).filter(Boolean),
-    source_type: document.getElementById('cf-source-type').value,
-    source_ref:  document.getElementById('cf-source-ref').value.trim(),
+    source_type: srcType,
+    source_ref:  sourceRef,
     fields:      _collectFields(),
   };
 

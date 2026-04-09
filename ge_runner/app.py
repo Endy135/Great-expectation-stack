@@ -605,11 +605,84 @@ def clear_results():
 
 def load_catalog():
     p = os.path.join(CATALOG_DIR, "catalog.json")
-    return json.load(open(p)) if os.path.exists(p) else {}
+    if not os.path.exists(p):
+        return {}
+    with open(p) as f:
+        return json.load(f)
 
 def save_catalog(data):
-    with open(os.path.join(CATALOG_DIR, "catalog.json"), "w") as f:
+    p = os.path.join(CATALOG_DIR, "catalog.json")
+    # ── Backup versionné avant chaque écriture ─────────────────────────────
+    if os.path.exists(p):
+        ts      = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        backup  = os.path.join(CATALOG_DIR, "backups")
+        os.makedirs(backup, exist_ok=True)
+        # Garder les 10 derniers backups seulement
+        existing = sorted(
+            [f for f in os.listdir(backup) if f.startswith("catalog_")],
+            reverse=True
+        )
+        for old in existing[9:]:
+            os.remove(os.path.join(backup, old))
+        import shutil
+        shutil.copy2(p, os.path.join(backup, f"catalog_{ts}.json"))
+    # ── Écriture atomique via fichier temporaire ───────────────────────────
+    tmp = p + ".tmp"
+    with open(tmp, "w") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, p)
+
+@app.route("/api/catalog/backups", methods=["GET"])
+def catalog_backups():
+    """Liste les backups disponibles."""
+    backup_dir = os.path.join(CATALOG_DIR, "backups")
+    if not os.path.isdir(backup_dir):
+        return jsonify({"backups": []})
+    files = sorted(
+        [f for f in os.listdir(backup_dir) if f.startswith("catalog_")],
+        reverse=True
+    )
+    result = []
+    for fname in files:
+        fpath = os.path.join(backup_dir, fname)
+        stat  = os.stat(fpath)
+        try:
+            with open(fpath) as f:
+                content = json.load(f)
+            count = len(content)
+        except Exception:
+            count = 0
+        result.append({
+            "filename":   fname,
+            "timestamp":  fname.replace("catalog_", "").replace(".json", ""),
+            "entries":    count,
+            "size_kb":    round(stat.st_size / 1024, 1),
+        })
+    return jsonify({"backups": result})
+
+@app.route("/api/catalog/backups/<filename>", methods=["GET"])
+def catalog_backup_download(filename):
+    """Télécharger le contenu d'un backup spécifique."""
+    if not filename.startswith("catalog_") or not filename.endswith(".json"):
+        return jsonify({"error": "Nom de fichier invalide"}), 400
+    path = os.path.join(CATALOG_DIR, "backups", filename)
+    if not os.path.exists(path):
+        return jsonify({"error": "Backup introuvable"}), 404
+    with open(path) as f:
+        return jsonify(json.load(f))
+
+@app.route("/api/catalog/backups/<filename>/restore", methods=["POST"])
+def catalog_backup_restore(filename):
+    """Restaurer un backup (écrase le catalogue actuel après backup de sécurité)."""
+    if not filename.startswith("catalog_") or not filename.endswith(".json"):
+        return jsonify({"error": "Nom de fichier invalide"}), 400
+    path = os.path.join(CATALOG_DIR, "backups", filename)
+    if not os.path.exists(path):
+        return jsonify({"error": "Backup introuvable"}), 404
+    with open(path) as f:
+        data = json.load(f)
+    save_catalog(data)   # sauvegarde automatique de l'actuel avant remplacement
+    return jsonify({"message": f"Catalogue restauré depuis {filename}", "entries": len(data)})
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ROUTES — CATALOGUE DE SOURCES
