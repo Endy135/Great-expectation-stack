@@ -14,15 +14,16 @@ services:
       - ./data:/data:ro
       - ge-results:/app/ge_results
       - ge-project:/app/ge_project
+      - ge-catalog:/app/ge_catalog
     env_file:
       - .env
     environment:
       - PYTHONUNBUFFERED=1
       - JAVA_TOOL_OPTIONS=-Xmx2g
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/data/preview"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
       interval: 30s
-      timeout: 15s
+      timeout: 5s
       retries: 5
       start_period: 60s
     restart: unless-stopped
@@ -47,6 +48,7 @@ services:
 volumes:
   ge-results:
   ge-project:
+  ge-catalog:
 
 networks:
   ge-net:

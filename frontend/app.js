@@ -9,6 +9,7 @@ const TAB_TITLES = {
   suites:   'Suites d\'expectations',
   validate: 'Validation',
   results:  'Résultats',
+  catalog:  'Catalogue des sources',
   docs:     'Documentation API',
 };
 
@@ -411,7 +412,10 @@ async function refreshColumns() {
     const r = await fetch(`${API}/data/columns`);
     if (!r.ok) return;
     const data = await r.json();
-    availableColumns = (data.columns || []).map(c => c.name || c);
+    // Stocker {name, type} pour chaque colonne
+    availableColumns = (data.columns || []).map(c =>
+      typeof c === 'object' ? c : { name: c, type: '' }
+    );
   } catch {}
 }
 
@@ -423,7 +427,11 @@ function renderExpParams() {
   const params = catalogue[type].params || [];
   wrap.innerHTML = params.map(p => {
     if (p === 'column') {
-      const opts = availableColumns.map(c => `<option value="${c}">${c}</option>`).join('');
+      // Afficher nom(type) dans la dropdown — valeur = nom seul
+      const opts = availableColumns.map(c => {
+        const label = c.type ? `${c.name} (${c.type})` : c.name;
+        return `<option value="${c.name}">${label}</option>`;
+      }).join('');
       return `<div class="form-col"><div class="form-label">Colonne</div><select class="input" id="param-column">${opts || '<option>—</option>'}</select></div>`;
     }
     if (p === 'value_set') {
@@ -679,7 +687,275 @@ async function init() {
     loadData(),
     loadCatalogue(),
     loadSuites(),
+    loadCatalog(),
   ]);
 }
 
 init();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CATALOGUE DES SOURCES
+// ─────────────────────────────────────────────────────────────────────────────
+
+let catalogData = {};  // toutes les entrées
+
+const SOURCE_TYPE_LABELS = { local: '📁 Local', minio: '🪣 MinIO', postgres: '🐘 PostgreSQL', '': '—' };
+const TAG_COLORS = [
+  'rgba(108,110,255,.15)', 'rgba(157,110,255,.15)', 'rgba(52,211,153,.12)',
+  'rgba(251,191,36,.12)',  'rgba(96,165,250,.12)',   'rgba(248,113,113,.12)',
+];
+function _tagColor(tag) {
+  let h = 0;
+  for (const c of tag) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
+  return TAG_COLORS[h % TAG_COLORS.length];
+}
+function _tagHtml(tag) {
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;font-family:var(--mono);background:${_tagColor(tag)};color:var(--text);margin:2px 2px 0 0;">${tag}</span>`;
+}
+
+async function loadCatalog() {
+  try {
+    const r = await fetch(`${API}/catalog`);
+    if (!r.ok) return;
+    catalogData = await r.json();
+    renderCatalog();
+  } catch {}
+}
+
+function renderCatalog(entries = null) {
+  const grid = document.getElementById('catalog-grid');
+  if (!grid) return;
+  const data = entries || Object.values(catalogData);
+  if (!data.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🗂️</div><div class="empty-text">Aucune source décrite — cliquez sur "+ Nouvelle entrée"</div></div>';
+    return;
+  }
+  grid.innerHTML = data.map(e => `
+    <div class="card" style="margin:0;position:relative;">
+      <div class="flex-center" style="margin-bottom:8px;gap:8px;">
+        <span style="font-weight:700;font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.name}">${e.alias || e.name}</span>
+        ${e.source_type ? `<span class="badge badge-info" style="font-size:10px;white-space:nowrap;">${SOURCE_TYPE_LABELS[e.source_type] || e.source_type}</span>` : ''}
+      </div>
+      ${e.name !== (e.alias || e.name) ? `<div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:6px;">${e.name}</div>` : ''}
+      ${e.description ? `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5;">${e.description}</div>` : ''}
+      ${e.source_ref  ? `<div style="font-size:11px;font-family:var(--mono);color:var(--accent);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.source_ref}">⟶ ${e.source_ref}</div>` : ''}
+      ${e.owner ? `<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">👤 ${e.owner}</div>` : ''}
+      ${e.tags?.length ? `<div style="margin-bottom:10px;">${e.tags.map(_tagHtml).join('')}</div>` : ''}
+      ${e.fields?.length ? `
+        <details style="margin-bottom:10px;">
+          <summary style="font-size:11px;color:var(--muted);cursor:pointer;user-select:none;font-weight:600;letter-spacing:.05em;text-transform:uppercase;">
+            ${e.fields.length} champ${e.fields.length > 1 ? 's' : ''}
+          </summary>
+          <div style="margin-top:8px;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <thead><tr style="background:var(--bg3);">
+                <th style="padding:5px 8px;text-align:left;color:var(--muted);font-weight:600;">Champ</th>
+                <th style="padding:5px 8px;text-align:left;color:var(--muted);font-weight:600;">Type</th>
+                <th style="padding:5px 8px;text-align:left;color:var(--muted);font-weight:600;">Description</th>
+                <th style="padding:5px 8px;text-align:center;color:var(--muted);font-weight:600;">Nullable</th>
+              </tr></thead>
+              <tbody>${e.fields.map(f => `
+                <tr style="border-top:1px solid var(--border);">
+                  <td style="padding:5px 8px;font-family:var(--mono);color:var(--accent);">${f.name}</td>
+                  <td style="padding:5px 8px;font-family:var(--mono);color:var(--muted);">${f.type || '—'}</td>
+                  <td style="padding:5px 8px;color:var(--text);">${f.description || ''}</td>
+                  <td style="padding:5px 8px;text-align:center;">${f.nullable !== false ? '✓' : '✗'}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </details>` : ''}
+      <div style="display:flex;gap:6px;margin-top:auto;padding-top:10px;border-top:1px solid var(--border);">
+        <button class="btn btn-ghost btn-sm" onclick="openCatalogModal('${e.name}')" style="flex:1;">✏️ Modifier</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCatalogEntry('${e.name}')">✕</button>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function filterCatalog() {
+  const search = (document.getElementById('catalog-search')?.value || '').toLowerCase();
+  const tag    = (document.getElementById('catalog-tag-filter')?.value || '').toLowerCase().trim();
+  let entries  = Object.values(catalogData);
+  if (search) {
+    entries = entries.filter(e =>
+      e.name.toLowerCase().includes(search) ||
+      (e.alias || '').toLowerCase().includes(search) ||
+      (e.owner || '').toLowerCase().includes(search) ||
+      (e.description || '').toLowerCase().includes(search)
+    );
+  }
+  if (tag) {
+    entries = entries.filter(e => (e.tags || []).some(t => t.toLowerCase().includes(tag)));
+  }
+  renderCatalog(entries);
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────────
+
+function openCatalogModal(key = null) {
+  const overlay = document.getElementById('catalog-modal-overlay');
+  const errEl   = document.getElementById('catalog-modal-error');
+  if (errEl) errEl.style.display = 'none';
+
+  ['cf-name','cf-alias','cf-description','cf-owner','cf-tags','cf-source-ref'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('cf-source-type').value = '';
+  document.getElementById('catalog-edit-key').value = '';
+  _renderFieldsEditor([]);   // reset tableau champs
+
+  if (key && catalogData[key]) {
+    const e = catalogData[key];
+    document.getElementById('catalog-modal-title').textContent = 'Modifier la source';
+    document.getElementById('catalog-edit-key').value   = key;
+    document.getElementById('cf-name').value            = e.name;
+    document.getElementById('cf-name').disabled         = true;
+    document.getElementById('cf-alias').value           = e.alias || '';
+    document.getElementById('cf-description').value     = e.description || '';
+    document.getElementById('cf-owner').value           = e.owner || '';
+    document.getElementById('cf-tags').value            = (e.tags || []).join(', ');
+    document.getElementById('cf-source-type').value     = e.source_type || '';
+    document.getElementById('cf-source-ref').value      = e.source_ref || '';
+    _renderFieldsEditor(e.fields || []);
+  } else {
+    document.getElementById('catalog-modal-title').textContent = 'Nouvelle source';
+    document.getElementById('cf-name').disabled = false;
+    // Pré-remplir avec les colonnes actives si disponibles
+    if (availableColumns.length) {
+      _renderFieldsEditor(availableColumns.map(c => ({
+        name: c.name, type: c.type || '', description: '', nullable: true
+      })));
+    }
+  }
+
+  overlay.style.display = 'flex';
+}
+
+// ── Éditeur de champs (tableau inline dans le modal) ─────────────────────────
+
+function _renderFieldsEditor(fields) {
+  const wrap = document.getElementById('cf-fields-wrap');
+  if (!wrap) return;
+
+  const rows = fields.map((f, i) => `
+    <tr id="cf-field-row-${i}">
+      <td style="padding:4px 6px;"><input class="input" style="font-size:11px;font-family:var(--mono);padding:5px 8px;" id="cff-name-${i}" value="${f.name || ''}" placeholder="nom_champ"></td>
+      <td style="padding:4px 6px;"><input class="input" style="font-size:11px;font-family:var(--mono);padding:5px 8px;" id="cff-type-${i}" value="${f.type || ''}" placeholder="string"></td>
+      <td style="padding:4px 6px;"><input class="input" style="font-size:11px;padding:5px 8px;" id="cff-desc-${i}" value="${f.description || ''}" placeholder="Description du champ…"></td>
+      <td style="padding:4px 6px;text-align:center;">
+        <input type="checkbox" id="cff-null-${i}" ${f.nullable !== false ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);">
+      </td>
+      <td style="padding:4px 6px;">
+        <button class="btn btn-danger btn-sm" style="padding:3px 7px;" onclick="_removeFieldRow(${i})">✕</button>
+      </td>
+    </tr>`).join('');
+
+  wrap.innerHTML = `
+    <div style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
+      <span class="form-label" style="margin:0;">Champs / colonnes</span>
+      <button class="btn btn-ghost btn-sm" onclick="_addFieldRow()" style="font-size:11px;">+ Ajouter un champ</button>
+    </div>
+    ${fields.length ? `
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:7px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;" id="cf-fields-table">
+        <thead>
+          <tr style="background:var(--bg3);">
+            <th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;min-width:120px;">Nom</th>
+            <th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;min-width:90px;">Type</th>
+            <th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Description</th>
+            <th style="padding:6px 8px;text-align:center;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;width:60px;">Nullable</th>
+            <th style="width:36px;"></th>
+          </tr>
+        </thead>
+        <tbody id="cf-fields-tbody">${rows}</tbody>
+      </table>
+    </div>` : `<div id="cf-fields-tbody"></div>`}`;
+}
+
+function _addFieldRow() {
+  // Lire les lignes existantes, ajouter une vide
+  const existing = _collectFields();
+  _renderFieldsEditor([...existing, { name: '', type: '', description: '', nullable: true }]);
+}
+
+function _removeFieldRow(i) {
+  const fields = _collectFields();
+  fields.splice(i, 1);
+  _renderFieldsEditor(fields);
+}
+
+function _collectFields() {
+  const tbody = document.getElementById('cf-fields-tbody');
+  if (!tbody) return [];
+  const rows = tbody.querySelectorAll('tr[id^="cf-field-row-"]');
+  return Array.from(rows).map((_, i) => ({
+    name:        document.getElementById(`cff-name-${i}`)?.value.trim() || '',
+    type:        document.getElementById(`cff-type-${i}`)?.value.trim() || '',
+    description: document.getElementById(`cff-desc-${i}`)?.value.trim() || '',
+    nullable:    document.getElementById(`cff-null-${i}`)?.checked ?? true,
+  })).filter(f => f.name);  // ignorer les lignes sans nom
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function closeCatalogModal() {
+  document.getElementById('catalog-modal-overlay').style.display = 'none';
+  document.getElementById('cf-name').disabled = false;
+}
+
+async function saveCatalogEntry() {
+  const errEl   = document.getElementById('catalog-modal-error');
+  const editKey = document.getElementById('catalog-edit-key').value;
+  const isEdit  = !!editKey;
+
+  const payload = {
+    name:        document.getElementById('cf-name').value.trim(),
+    alias:       document.getElementById('cf-alias').value.trim(),
+    description: document.getElementById('cf-description').value.trim(),
+    owner:       document.getElementById('cf-owner').value.trim(),
+    tags:        document.getElementById('cf-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+    source_type: document.getElementById('cf-source-type').value,
+    source_ref:  document.getElementById('cf-source-ref').value.trim(),
+    fields:      _collectFields(),
+  };
+
+  if (!payload.name) {
+    errEl.textContent = 'Le nom est obligatoire.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const url    = isEdit ? `${API}/catalog/${editKey}` : `${API}/catalog`;
+  const method = isEdit ? 'PUT' : 'POST';
+
+  try {
+    const r = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      errEl.textContent = d.error || `Erreur ${r.status}`;
+      errEl.style.display = 'block';
+      return;
+    }
+    closeCatalogModal();
+    await loadCatalog();
+    toast(isEdit ? 'Entrée mise à jour' : 'Entrée créée', 'success');
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function deleteCatalogEntry(key) {
+  if (!confirm(`Supprimer "${key}" du catalogue ?`)) return;
+  const r = await fetch(`${API}/catalog/${key}`, { method: 'DELETE' });
+  if (!r.ok) { toast('Erreur suppression', 'danger'); return; }
+  await loadCatalog();
+  toast('Entrée supprimée', 'success');
+}
+

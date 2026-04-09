@@ -35,6 +35,10 @@
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
         <span>Résultats</span>
       </div>
+      <div class="nav-item" onclick="goto('catalog', event)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+        <span>Catalogue</span>
+      </div>
       <div class="nav-item" onclick="goto('docs', event)">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h6l3 3v9H4z"/><path d="M10 2v3h3"/><path d="M6 8h5M6 11h3"/></svg>
         <span>API Docs</span>
@@ -217,6 +221,79 @@
           </div>
           <div id="results-list"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Aucun résultat</div></div></div>
         </div>
+      </div>
+
+
+      <!-- ── ONGLET CATALOGUE ─────────────────────────────────────────── -->
+      <div class="tab-panel" id="tab-catalog">
+
+        <div class="flex-center mb-16" style="gap:12px;">
+          <input class="input" id="catalog-search" placeholder="🔍  Rechercher par nom, alias, propriétaire…" oninput="filterCatalog()" style="max-width:360px;">
+          <input class="input" id="catalog-tag-filter" placeholder="Filtrer par tag…" oninput="filterCatalog()" style="max-width:200px;">
+          <button class="btn btn-primary btn-sm ml-auto" onclick="openCatalogModal()">+ Nouvelle entrée</button>
+        </div>
+
+        <div id="catalog-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;">
+          <div class="empty"><div class="empty-icon">🗂️</div><div class="empty-text">Chargement…</div></div>
+        </div>
+
+        <!-- Modal création / édition -->
+        <div id="catalog-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;">
+          <div style="background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:28px;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+            <div class="flex-center mb-16">
+              <span style="font-size:15px;font-weight:700;" id="catalog-modal-title">Nouvelle source</span>
+              <button class="btn btn-ghost btn-sm ml-auto" onclick="closeCatalogModal()">✕</button>
+            </div>
+            <input type="hidden" id="catalog-edit-key">
+            <div class="form-row">
+              <div class="form-col">
+                <div class="form-label">Nom *</div>
+                <input class="input mb-10" id="cf-name" placeholder="ex: transactions_2024">
+              </div>
+              <div class="form-col">
+                <div class="form-label">Alias / libellé</div>
+                <input class="input mb-10" id="cf-alias" placeholder="ex: Transactions clients">
+              </div>
+            </div>
+            <div class="form-label">Description</div>
+            <textarea class="input mb-10" id="cf-description" rows="3" placeholder="Décrivez le contenu, le contexte, les règles métier…" style="resize:vertical;font-family:var(--sans);"></textarea>
+            <div class="form-row">
+              <div class="form-col">
+                <div class="form-label">Propriétaire / équipe</div>
+                <input class="input mb-10" id="cf-owner" placeholder="ex: équipe data, jean.dupont">
+              </div>
+              <div class="form-col">
+                <div class="form-label">Tags (séparés par virgule)</div>
+                <input class="input mb-10" id="cf-tags" placeholder="ex: finance, prod, critique">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-col">
+                <div class="form-label">Type de source</div>
+                <select class="input mb-10" id="cf-source-type">
+                  <option value="">— non spécifié —</option>
+                  <option value="local">📁 Local</option>
+                  <option value="minio">🪣 MinIO</option>
+                  <option value="postgres">🐘 PostgreSQL</option>
+                </select>
+              </div>
+              <div class="form-col">
+                <div class="form-label">Référence (chemin / table / clé)</div>
+                <input class="input mb-10" id="cf-source-ref" placeholder="ex: ventes.csv ou public.orders">
+              </div>
+            </div>
+
+            <!-- Éditeur de champs -->
+            <div id="cf-fields-wrap" style="margin-bottom:12px;"></div>
+
+            <div id="catalog-modal-error" style="color:var(--danger);font-size:12px;margin-bottom:10px;display:none;"></div>
+            <div class="flex-center" style="gap:8px;justify-content:flex-end;">
+              <button class="btn btn-ghost btn-sm" onclick="closeCatalogModal()">Annuler</button>
+              <button class="btn btn-primary btn-sm" onclick="saveCatalogEntry()">Enregistrer</button>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- ── ONGLET DOCS ──────────────────────────────────────────────── -->

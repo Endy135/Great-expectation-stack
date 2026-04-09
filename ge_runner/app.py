@@ -21,8 +21,10 @@ CORS(app)
 
 GE_ROOT     = "/app/ge_project"
 RESULTS_DIR = "/app/ge_results"
+CATALOG_DIR = "/app/ge_catalog"
 os.makedirs(RESULTS_DIR, exist_ok=True)
 os.makedirs(GE_ROOT, exist_ok=True)
+os.makedirs(CATALOG_DIR, exist_ok=True)
 
 SUPPORTED_EXT = {".csv", ".parquet", ".json", ".jsonl"}
 
@@ -596,6 +598,94 @@ def get_results():
 def clear_results():
     save_results([])
     return jsonify({"message": "Historique effacé."})
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CATALOGUE DE SOURCES — persistance
+# ─────────────────────────────────────────────────────────────────────────────
+
+def load_catalog():
+    p = os.path.join(CATALOG_DIR, "catalog.json")
+    return json.load(open(p)) if os.path.exists(p) else {}
+
+def save_catalog(data):
+    with open(os.path.join(CATALOG_DIR, "catalog.json"), "w") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ROUTES — CATALOGUE DE SOURCES
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route("/api/catalog", methods=["GET"])
+def catalog_list():
+    """Retourne toutes les entrées du catalogue de sources."""
+    return jsonify(load_catalog())
+
+
+@app.route("/api/catalog", methods=["POST"])
+def catalog_create():
+    """Créer une nouvelle entrée dans le catalogue."""
+    data = request.json or {}
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "Le champ 'name' est obligatoire"}), 400
+    catalog = load_catalog()
+    if name in catalog:
+        return jsonify({"error": f"Une entrée '{name}' existe déjà"}), 409
+    entry = {
+        "name":        name,
+        "alias":       data.get("alias", "").strip(),
+        "description": data.get("description", "").strip(),
+        "owner":       data.get("owner", "").strip(),
+        "tags":        [t.strip() for t in data.get("tags", []) if t.strip()],
+        "source_type": data.get("source_type", ""),
+        "source_ref":  data.get("source_ref", ""),
+        # Liste de champs décrits : [{name, type, description, nullable}]
+        "fields":      data.get("fields", []),
+        "created_at":  datetime.utcnow().isoformat(),
+        "updated_at":  datetime.utcnow().isoformat(),
+    }
+    catalog[name] = entry
+    save_catalog(catalog)
+    return jsonify({"message": f"Entrée '{name}' créée.", "entry": entry}), 201
+
+
+@app.route("/api/catalog/<name>", methods=["GET"])
+def catalog_get(name):
+    catalog = load_catalog()
+    if name not in catalog:
+        return jsonify({"error": "Entrée introuvable"}), 404
+    return jsonify(catalog[name])
+
+
+@app.route("/api/catalog/<name>", methods=["PUT"])
+def catalog_update(name):
+    """Mettre à jour une entrée existante (champs partiels acceptés)."""
+    catalog = load_catalog()
+    if name not in catalog:
+        return jsonify({"error": "Entrée introuvable"}), 404
+    data  = request.json or {}
+    entry = catalog[name]
+    for field in ("alias", "description", "owner", "source_type", "source_ref"):
+        if field in data:
+            entry[field] = data[field].strip() if isinstance(data[field], str) else data[field]
+    if "tags" in data:
+        entry["tags"] = [t.strip() for t in data["tags"] if t.strip()]
+    if "fields" in data:
+        entry["fields"] = data["fields"]   # [{name, type, description, nullable}]
+    entry["updated_at"] = datetime.utcnow().isoformat()
+    catalog[name] = entry
+    save_catalog(catalog)
+    return jsonify({"message": f"Entrée '{name}' mise à jour.", "entry": entry})
+
+
+@app.route("/api/catalog/<name>", methods=["DELETE"])
+def catalog_delete(name):
+    catalog = load_catalog()
+    if name not in catalog:
+        return jsonify({"error": "Entrée introuvable"}), 404
+    del catalog[name]
+    save_catalog(catalog)
+    return jsonify({"message": f"Entrée '{name}' supprimée."})
 
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
